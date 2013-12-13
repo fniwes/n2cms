@@ -19,6 +19,7 @@ namespace N2.Configuration
         Oracle = 0x2000,
         Oracle9i = 0x4000,
         Oracle10g = 0x8000,
+        OracleOdp = 0x9000,
         NoSql = 0x10000,
         MongoDB = NoSql | 0x20000,
         Xml = NoSql | 0x40000

@@ -188,10 +188,11 @@ namespace N2.Persistence.NH
                     break;
                 case DatabaseFlavour.Oracle:
                 case DatabaseFlavour.Oracle10g:
-                    // if you have OracleOdpDriver installed
-                    // use the following line instead of the the later one (NOTICE both apply to the same property)
-                    // Properties[NHibernate.Cfg.Environment.ConnectionDriver] = typeof(NHibernate.Driver.OracleDataClientDriver).AssemblyQualifiedName;
                     Properties[NHibernate.Cfg.Environment.ConnectionDriver] = typeof(NHibernate.Driver.OracleClientDriver).AssemblyQualifiedName;
+                    Properties[NHibernate.Cfg.Environment.Dialect] = typeof(NHibernate.Dialect.Oracle10gDialect).AssemblyQualifiedName;
+                    break;
+                case DatabaseFlavour.OracleOdp:
+                    Properties[NHibernate.Cfg.Environment.ConnectionDriver] = typeof(NHibernate.Driver.OracleDataClientDriver).AssemblyQualifiedName;
                     Properties[NHibernate.Cfg.Environment.Dialect] = typeof(NHibernate.Dialect.Oracle10gDialect).AssemblyQualifiedName;
                     break;
                 case DatabaseFlavour.MongoDB:
@@ -218,6 +219,8 @@ namespace N2.Persistence.NH
                 return DatabaseFlavour.Oracle;
             if (provider.StartsWith("System.Data.SqlServerCe"))
                 return DatabaseFlavour.SqlCe;
+            if (provider.StartsWith("Oracle.OdpClient"))
+                return DatabaseFlavour.OracleOdp;
             if (css.ConnectionString.StartsWith("mongodb:"))
                 throw new ConfigurationErrorsException("Cannot auto-detect MongoDB. This needs to be configured as flavor=\"MongoDB\" in the n2/database config section");
 
@@ -385,7 +388,7 @@ namespace N2.Persistence.NH
             ca.ManyToOne(x => x.EnclosingCollection, cm => { cm.Column("DetailCollectionID"); cm.Fetch(FetchKind.Select); cm.Lazy(LazyRelation.Proxy); });
             ca.Property(x => x.ValueTypeKey, cm => { cm.Column("Type"); cm.Length(10); });
             ca.Property(x => x.Name, cm => { cm.Length(50); });
-            ca.Property(x => x.Meta, cm => { cm.Type(NHibernateUtil.StringClob); cm.Length(stringLength); });
+            ca.Property(x => x.Meta, cm => { cm.Type(GetStringClobType()); cm.Length(stringLength); });
             ca.Property(x => x.BoolValue, cm => { });
             ca.Property(x => x.DateTimeValue, cm => { });
             ca.Property(x => x.IntValue, cm => { });
@@ -395,12 +398,16 @@ namespace N2.Persistence.NH
             });
             //ca.ManyToOne(x => x.LinkedItem, cm => { cm.Column("LinkValue"); cm.NotFound(NotFoundMode.Ignore); cm.Fetch(FetchKind.Select); cm.Lazy(LazyRelation.Proxy); cm.Cascade(Cascade.None); });
             ca.Property(x => x.DoubleValue, cm => { });
-            // if you are using Oracle10g and get 
-            // ORA-01461: can bind a LONG value only for insert into a LONG column
-            // use the following line instead of the the later one (NOTICE both apply to the same property)
-            // ca.Property(x => x.StringValue, cm => { cm.Type(NHibernateUtil.AnsiString); cm.Length(stringLength); });
-            ca.Property(x => x.StringValue, cm => { cm.Type(NHibernateUtil.StringClob); cm.Length(stringLength); });
+            ca.Property(x => x.StringValue, cm => { cm.Type(GetStringClobType()); cm.Length(stringLength); });
             ca.Property(x => x.ObjectValue, cm => { cm.Column("Value"); cm.Type(NHibernateUtil.Serializable); cm.Length(ConfigurationBuilder.BlobLength); });
+        }
+
+        private NHibernate.Type.IType GetStringClobType()
+        {
+            if (Properties[NHibernate.Cfg.Environment.ConnectionDriver] == typeof(NHibernate.Driver.OracleDataClientDriver).AssemblyQualifiedName)
+                return NHibernateUtil.AnsiString;
+            else
+                return NHibernateUtil.StringClob;
         }
 
         void DetailCollectionCustomization(IClassMapper<DetailCollection> ca)
@@ -449,7 +456,7 @@ namespace N2.Persistence.NH
             ca.Property(x => x.State, cm => { });
             ca.Property(x => x.SavedBy, cm => { });
             ca.Property(x => x.ItemCount, cm => { });
-            ca.Property(x => x.VersionDataXml, cm => { cm.Type(NHibernateUtil.StringClob); cm.Length(stringLength); });
+            ca.Property(x => x.VersionDataXml, cm => { cm.Type(GetStringClobType()); cm.Length(stringLength); });
         }
 
         private string FormatMapping(string mappingXml)
@@ -577,6 +584,8 @@ namespace N2.Persistence.NH
                     return true;
             return false;
         }
+
+
 
         #endregion
     }
