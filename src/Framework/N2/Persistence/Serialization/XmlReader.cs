@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Web;
 using System.Xml.XPath;
 
 namespace N2.Persistence.Serialization
@@ -32,6 +33,10 @@ namespace N2.Persistence.Serialization
             else if (type == typeof(DateTime))
             {
                 return ToNullableDateTime(value);
+            }
+            else if (type.IsEnum) {
+                value = HttpUtility.HtmlDecode(value);
+                return Utility.Convert(value, type);
             }
             else
                 return Utility.Convert(value, type);
